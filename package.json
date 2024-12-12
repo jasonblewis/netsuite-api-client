@@ -21,9 +21,10 @@
   "types": "dist/index.d.ts",
   "scripts": {
     "build": "tsc --build --clean && tsc",
+    "build:watch": "tsc --build --watch --pretty --verbose",
     "test": "vitest",
     "coverage": "vitest --coverage",
-    "prepublishOnly": "yarn build"
+    "prepublishOnly": "pnpm build"
   },
   "devDependencies": {
     "@tsconfig/node18": "^18.2.2",
@@ -34,6 +35,8 @@
     "vitest": "^2.0.0"
   },
   "dependencies": {
+    "@types/debug": "^4.1.12",
+    "debug": "^4.4.0",
     "got": "^14.0.0",
     "oauth-1.0a": "^2.2.6"
   },

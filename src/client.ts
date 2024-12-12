@@ -1,6 +1,11 @@
 import OAuth from "oauth-1.0a";
 import crypto from "crypto";
-import got, { HTTPError, OptionsOfTextResponseBody } from "got";
+import got, { 
+  HTTPError, 
+  OptionsOfTextResponseBody, 
+  Method, 
+  Response as GotResponse
+} from "got";
 import { Readable } from "stream";
 import {
   NetsuiteOptions,
@@ -9,16 +14,39 @@ import {
   NetsuiteResponse,
 } from "./types.js";
 import { NetsuiteError } from "./errors.js";
+import type { PlainResponse } from 'got';
+import debug from 'debug';
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const logDir = path.join(__dirname, '../../logs');
+const logFile = path.join(logDir, 'netsuite-debug.log');
+
+// Log immediately when module is loaded
+fs.mkdirSync(logDir, { recursive: true });
+fs.writeFileSync(logFile, `${new Date().toISOString()} - Module loaded from: ${__filename}\n`);
+
+const logToFile = (message: string) => {
+  try {
+    fs.writeFileSync(logFile, `${new Date().toISOString()} - ${message}\n`, { flag: 'a' });
+  } catch (error) {
+    console.error('Failed to write to log file:', error);
+  }
+};
 
 export default class NetsuiteApiClient {
-  consumer_key: string;
-  consumer_secret_key: string;
-  token: string;
-  token_secret: string;
-  version: string;
-  algorithm: string;
-  realm: string;
-  base_url?: string;
+  private consumer_key: string;
+  private consumer_secret_key: string;
+  private token: string;
+  private token_secret: string;
+  private version: string;
+  private algorithm: string;
+  private realm: string;
+  private base_url?: string;
+  private hooks?: NetsuiteOptions['hooks'];
 
   constructor(options: NetsuiteOptions) {
     this.consumer_key = options.consumer_key;
@@ -29,6 +57,7 @@ export default class NetsuiteApiClient {
     this.algorithm = "HMAC-SHA256";
     this.realm = options.realm;
     this.base_url = options.base_url;
+    this.hooks = options.hooks;
   }
 
   /**
@@ -59,7 +88,7 @@ export default class NetsuiteApiClient {
           secret: this.token_secret,
         }
       )
-    ) as unknown as { [key: string]: string };
+    ).Authorization as string;
   }
 
   /**
@@ -68,26 +97,50 @@ export default class NetsuiteApiClient {
    * @returns
    */
   public async request(opts: NetsuiteRequestOptions) {
+    logToFile('NetsuiteApiClient.request called');
     const { path = "*", method = "GET", body = "", heads = {} } = opts;
 
-    // Setup the Request URI
     let uri;
-    if (this.base_url) uri = `${this.base_url}/services/rest/${path}`;
-    else {
-      // as suggested by dylbarne in #15: sanitize url to enhance overall usability
-      uri = `https://${this.realm
-        .toLowerCase()
-        .replace("_", "-")}.suitetalk.api.netsuite.com/services/rest/${path}`;
+    if (this.base_url) {
+      uri = `${this.base_url}/services/rest/${path}`;
+    } else {
+      uri = `https://${this.realm.toLowerCase().replace("_", "-")}.suitetalk.api.netsuite.com/services/rest/${path}`;
     }
 
-    const options = {
-      method,
-      headers: this.getAuthorizationHeader(uri, method),
-      throwHttpErrors: true,
+    logToFile(`Creating request options for URI: ${uri}`);
+
+    const options: OptionsOfTextResponseBody = {
+      method: method as Method,
+      headers: { Authorization: this.getAuthorizationHeader(uri, method) },
+      throwHttpErrors: false,
       decompress: true,
-      retry: { limit: 0 },
-      timeout: {request: 1000 }
-    } as OptionsOfTextResponseBody;
+      retry: { 
+        limit: 0,
+        methods: [],
+        statusCodes: [],
+        errorCodes: [],
+        maxRetryAfter: 0
+      },
+      timeout: { 
+        request: 1000,
+        response: 1000 
+      }
+    };
+
+    // Merge hooks from constructor
+    if (this.hooks) {
+      logToFile('Applying hooks from constructor');
+      options.hooks = {
+        beforeRequest: [
+          ...(this.hooks.beforeRequest || []),
+          ...(options.hooks?.beforeRequest || [])
+        ],
+        afterResponse: [
+          ...(this.hooks.afterResponse || []),
+          ...(options.hooks?.afterResponse || [])
+        ]
+      };
+    }
 
     if (Object.keys(heads).length > 0) {
       options.headers = { ...options.headers, ...heads };
@@ -96,20 +149,35 @@ export default class NetsuiteApiClient {
       options.body = body;
       options.headers!.prefer = "transient";
     }
+
+    logToFile(`Making request with options: ${JSON.stringify({
+      method: options.method,
+      retry: options.retry,
+      timeout: options.timeout,
+      hasHooks: !!options.hooks
+    }, null, 2)}`);
+
     try {
-      //      const { response, timings }  = await got(uri, options);
-      const response  = await got(uri, options);
-      return {
-        ...response,
-        headers: response.headers,
-        data: response.body ? JSON.parse(response.body) : null,
-	timings: response.timings, 
-      } as NetsuiteResponse;
-    } catch (e) {
-      if (e instanceof HTTPError) {
-        throw new NetsuiteError(e);
+      const response = await got(uri, options);
+      logToFile(`Got response: ${response.statusCode}`);
+
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        return {
+          statusCode: response.statusCode,
+          headers: response.headers,
+          data: response.body ? JSON.parse(response.body.toString()) : null,
+          timings: response.timings,
+        } as NetsuiteResponse;
       }
-      throw e;
+
+      throw new NetsuiteError(new HTTPError(response as any));
+
+    } catch (error: unknown) {
+      logToFile(`Request error: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      if (error instanceof HTTPError) {
+        throw new NetsuiteError(error);
+      }
+      throw error instanceof Error ? error : new Error('Unknown error');
     }
   }
 

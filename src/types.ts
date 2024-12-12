@@ -7,6 +7,10 @@ export type NetsuiteOptions = {
   token_secret: string;
   realm: string;
   base_url?: string;
+  hooks?: {
+    beforeRequest?: ((options: any) => void)[];
+    afterResponse?: ((response: any) => any)[];
+  };
 };
 
 export type NetsuiteRequestOptions = {
