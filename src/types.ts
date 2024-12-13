@@ -1,4 +1,12 @@
 import type { Timings } from "@szmarczak/http-timer";
+import type { Method } from "got";
+
+export type RetryOptions = {
+  limit?: number;
+  methods?: Method[];
+  statusCodes?: number[];
+  maxRetryAfter?: number;
+};
 
 export type NetsuiteOptions = {
   consumer_key: string;
@@ -11,6 +19,7 @@ export type NetsuiteOptions = {
     beforeRequest?: ((options: any) => void)[];
     afterResponse?: ((response: any) => any)[];
   };
+  retry?: RetryOptions;
 };
 
 export type NetsuiteRequestOptions = {
