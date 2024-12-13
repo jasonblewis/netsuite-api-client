@@ -1,5 +1,5 @@
 import type { Timings } from "@szmarczak/http-timer";
-import type { Method } from "got";
+import type { Method, BeforeRequestHook, AfterResponseHook } from "got";
 
 export type RetryOptions = {
   limit?: number;
@@ -16,10 +16,15 @@ export type NetsuiteOptions = {
   realm: string;
   base_url?: string;
   hooks?: {
-    beforeRequest?: ((options: any) => void)[];
-    afterResponse?: ((response: any) => any)[];
+    beforeRequest?: BeforeRequestHook[];
+    afterResponse?: AfterResponseHook[];
   };
   retry?: RetryOptions;
+  queue?: {
+    concurrency?: number;     // Max number of concurrent requests
+    intervalCap?: number;     // Optional: max requests per interval
+    interval?: number;        // Optional: interval in milliseconds
+  };
 };
 
 export type NetsuiteRequestOptions = {
