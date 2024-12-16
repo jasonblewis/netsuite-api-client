@@ -323,16 +323,19 @@ export default class NetsuiteApiClient {
         methods: this.retry?.methods ?? ['GET' as Method],
         statusCodes: this.retry?.statusCodes ?? [429, 500],
         maxRetryAfter: this.retry?.maxRetryAfter ?? 60,
+        errorCodes: ['ECONNRESET', 'ECONNREFUSED', 'ECONNABORTED', 'ETIMEDOUT'],  // Only retry on network errors
         calculateDelay: ({ error, attemptCount }) => {
+          // Don't retry on client errors (4xx except 429)
+          if (error?.response?.statusCode && error.response.statusCode >= 400 && error.response.statusCode < 500 && error.response.statusCode !== 429) {
+            return 0;  // Return 0 to prevent retry
+          }
+          
           if (error?.response?.statusCode === 401 || error?.response?.statusCode === 403) {
             return 0;
           }
-          // Base delay with exponential backoff starting at 1 second
+          
           const baseDelay = Math.min(1000 * Math.pow(1.8, attemptCount), 15000);
-          
-          // Add larger random jitter between 1-10 seconds
           const jitter = Math.floor(Math.random() * 9000) + 1000;
-          
           return baseDelay + jitter;
         }
       },
@@ -517,16 +520,19 @@ export default class NetsuiteApiClient {
           methods: this.retry?.methods ?? ['GET' as Method],
           statusCodes: this.retry?.statusCodes ?? [429, 500],
           maxRetryAfter: this.retry?.maxRetryAfter ?? 60,
+          errorCodes: ['ECONNRESET', 'ECONNREFUSED', 'ECONNABORTED', 'ETIMEDOUT'],  // Only retry on network errors
           calculateDelay: ({ error, attemptCount }) => {
+            // Don't retry on client errors (4xx except 429)
+            if (error?.response?.statusCode && error.response.statusCode >= 400 && error.response.statusCode < 500 && error.response.statusCode !== 429) {
+              return 0;  // Return 0 to prevent retry
+            }
+            
             if (error?.response?.statusCode === 401 || error?.response?.statusCode === 403) {
               return 0;
             }
-            // Base delay with exponential backoff starting at 1 second
+            
             const baseDelay = Math.min(1000 * Math.pow(1.8, attemptCount), 15000);
-            
-            // Add larger random jitter between 1-10 seconds
             const jitter = Math.floor(Math.random() * 9000) + 1000;
-            
             return baseDelay + jitter;
           }
         },
