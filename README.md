@@ -142,3 +142,33 @@ You can navigate to the referenced resources without deeper knowledge of the sys
 ### Netsuite Rest API Browser
 
 [REST API Browser](https://system.netsuite.com/help/helpcenter/en_US/APIs/REST_API_Browser/record/v1/2021.2/index.html) provides a visual overview of the structure and capabilities of the REST web services Record API. The data presented in the REST API Browser is based on OpenAPI 3.0 metadata.
+
+## Debugging
+
+This library uses the [debug](https://github.com/debug-js/debug) module for logging. To enable logs, set the DEBUG environment variable:
+
+```bash
+# Enable all logs
+DEBUG=* node your-script.js
+
+# Enable specific logs
+DEBUG=netsuite-api:queue node your-script.js    # Queue operations only
+DEBUG=netsuite-api:retry node your-script.js    # Retry operations only
+DEBUG=netsuite-api:request node your-script.js  # Request/response logs only
+DEBUG=netsuite-api:error node your-script.js    # Error logs only
+
+# Enable multiple specific logs
+DEBUG=netsuite-api:queue,netsuite-api:retry node your-script.js
+
+# When using test scripts, you can combine namespaces
+DEBUG=test:*,netsuite-api:* node your-script.js     # All test and client logs
+DEBUG=test:error,netsuite-api:error node your-script.js  # Error logs only from both
+```
+
+By default, no debug logs are output unless explicitly enabled via the DEBUG environment variable.
+
+The logging levels follow standard conventions:
+- debug: Most verbose - technical details
+- info: General information
+- warn: Warnings
+- error: Errors

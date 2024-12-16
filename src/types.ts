@@ -1,11 +1,22 @@
 import type { Timings } from "@szmarczak/http-timer";
-import type { Method, BeforeRequestHook, AfterResponseHook } from "got";
+import type { Method, BeforeRequestHook, AfterResponseHook, BeforeRetryHook } from "got";
 
-export type RetryOptions = {
-  limit?: number;
-  methods?: Method[];
-  statusCodes?: number[];
-  maxRetryAfter?: number;
+// Define a strict retry options type
+type NetsuiteRetryOptions = {
+  limit: number;              // Required: Maximum number of retries
+  methods?: Method[];         // Optional: HTTP methods to retry
+  statusCodes: number[];      // Required: Status codes to retry on
+  maxRetryAfter: number;      // Required: Maximum retry delay
+  retryAfter: number;        // Required: Default retry delay
+  [key: string]: never | number | Method[] | number[] | undefined;
+};
+
+// Define a strict hooks type that only allows specified properties
+type NetsuiteHooks = {
+  beforeRequest?: BeforeRequestHook[];
+  afterResponse?: AfterResponseHook[];
+  beforeRetry?: BeforeRetryHook[];
+  [key: string]: never | BeforeRequestHook[] | AfterResponseHook[] | BeforeRetryHook[] | undefined;
 };
 
 export type NetsuiteOptions = {
@@ -15,15 +26,12 @@ export type NetsuiteOptions = {
   token_secret: string;
   realm: string;
   base_url?: string;
-  hooks?: {
-    beforeRequest?: BeforeRequestHook[];
-    afterResponse?: AfterResponseHook[];
-  };
-  retry?: RetryOptions;
+  hooks?: NetsuiteHooks;
+  retry: NetsuiteRetryOptions;  // Required and using strict type
   queue?: {
-    concurrency?: number;     // Max number of concurrent requests
-    intervalCap?: number;     // Optional: max requests per interval
-    interval?: number;        // Optional: interval in milliseconds
+    concurrency?: number;
+    intervalCap?: number;
+    interval?: number;
   };
 };
 
