@@ -1,6 +1,6 @@
 {
   "name": "netsuite-api-client",
-  "version": "1.0.0-test.1",
+  "version": "v1.1.1",
   "description": "Netsuite client for REST interface",
   "keywords": [
     "netsuite",
@@ -12,12 +12,13 @@
     "suiteql"
   ],
   "type": "module",
-  "author": "Julien Bras <julienbras@sidoine.org>",
-  "homepage": "https://github.com/julbrs/netsuite-api-client#readme",
-  "bugs": "https://github.com/julbrs/netsuite-api-client/issues",
+  "author": "Jason Lewis <jason@dickson.st>",
+  "homepage": "https://github.com/jasonblewis/netsuite-api-client#readme",
+  "bugs": "https://github.com/jasonblewis/netsuite-api-client/issues",
   "exports": {
     ".": "./dist/index.js"
   },
+  "fork": "https://github.com/julbrs/netsuite-api-client",
   "types": "dist/index.d.ts",
   "scripts": {
     "build": "tsc --build --clean && tsc",
